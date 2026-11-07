@@ -1,0 +1,50 @@
+[workspace]
+resolver = "2"
+members = [
+    "controller",
+    "worker",
+    "ipc",
+    "tools",
+    "isolation",
+    "web",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+repository = "https://github.com/LMA1980/mu-ci"
+authors = ["LMA1980"]
+
+[workspace.dependencies]
+mu-ci-controller = { path = "controller", version = "0.1.0" }
+mu-ci-worker = { path = "worker", version = "0.2.0" }
+mu-ci-ipc = { path = "ipc", version = "0.1.0" }
+mu-ci-tools = { path = "tools", version = "0.1.0" }
+mu-ci-isolation = { path = "isolation", version = "0.1.0" }
+mu-ci-web = { path = "web", version = "0.1.0" }
+
+[patch."https://github.com/LMA1980/mu-ci-controller.git"]
+mu-ci-controller = { path = "controller" }
+
+[patch."https://github.com/LMA1980/mu-ci-worker.git"]
+mu-ci-worker = { path = "worker" }
+
+[patch."https://github.com/LMA1980/mu-ci-ipc.git"]
+mu-ci-ipc = { path = "ipc" }
+
+[patch."https://github.com/LMA1980/mu-ci-tools.git"]
+mu-ci-tools = { path = "tools" }
+
+[patch."https://github.com/LMA1980/mu-ci-isolation.git"]
+mu-ci-isolation = { path = "isolation" }
+
+[patch."https://github.com/LMA1980/mu-ci-web.git"]
+mu-ci-web = { path = "web" }
+
+[patch.crates-io]
+mu-ci-controller = { path = "controller" }
+mu-ci-worker = { path = "worker" }
+mu-ci-ipc = { path = "ipc" }
+mu-ci-tools = { path = "tools" }
+mu-ci-isolation = { path = "isolation" }
+mu-ci-web = { path = "web" }
