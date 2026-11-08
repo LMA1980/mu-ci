@@ -1,0 +1,26 @@
+name = "mu-ci"
+# Workspace Symposium manifest for mu-ci.
+
+[[plugins]]
+depends-on = ["mu-ci-controller"]
+source.cargo = "mu-ci-controller"
+
+[[plugins]]
+depends-on = ["mu-ci-worker"]
+source.cargo = "mu-ci-worker"
+
+[[plugins]]
+depends-on = ["mu-ci-ipc"]
+source.cargo = "mu-ci-ipc"
+
+[[plugins]]
+depends-on = ["mu-ci-tools"]
+source.cargo = "mu-ci-tools"
+
+[[plugins]]
+depends-on = ["mu-ci-isolation"]
+source.cargo = "mu-ci-isolation"
+
+[[plugins]]
+depends-on = ["mu-ci-web"]
+source.cargo = "mu-ci-web"

@@ -1,0 +1,24 @@
+[submodule "code/controller"]
+	path = code/controller
+	url = https://github.com/LMA1980/mu-ci-controller.git
+	branch = feat/m8-naming-alignment
+[submodule "code/worker"]
+	path = code/worker
+	url = https://github.com/LMA1980/mu-ci-worker.git
+	branch = feat/m8-naming-alignment
+[submodule "code/ipc"]
+	path = code/ipc
+	url = https://github.com/LMA1980/mu-ci-ipc.git
+	branch = feat/m8-naming-alignment
+[submodule "code/tools"]
+	path = code/tools
+	url = https://github.com/LMA1980/mu-ci-tools.git
+	branch = feat/m8-naming-alignment
+[submodule "code/isolation"]
+	path = code/isolation
+	url = https://github.com/LMA1980/mu-ci-isolation.git
+	branch = feat/m8-naming-alignment
+[submodule "code/web"]
+	path = code/web
+	url = https://github.com/LMA1980/mu-ci-web.git
+	branch = feat/m8-naming-alignment
