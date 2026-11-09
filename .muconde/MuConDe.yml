@@ -1,10 +1,9 @@
 version: "1"
-service: "mu-ci"
+service: "mu-ci-controller"
 
 target_nodes:
   - "node-a"
   - "node-b"
-  - "worker-riscv64"
 
 lease_ttl_seconds: 300
 warmup_timeout_seconds: 30
@@ -17,9 +16,8 @@ deployment:
   target_nodes:
     - "node-a"
     - "node-b"
-    - "worker-riscv64"
   binary: "mu-ci-controller"
-  install_path: "/srv/mucd/mu-ci-controller/current/bin/mu-ci-controller"
+  install_path: "/usr/local/bin/mu-ci-controller"
   systemd_unit: "mu-ci-controller.service"
 
 verification:
