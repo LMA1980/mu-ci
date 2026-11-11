@@ -10,18 +10,18 @@ members = [
 ]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 repository = "https://github.com/LMA1980/mu-ci"
 authors = ["LMA1980"]
 license = "AGPL-3.0-only"
 
 [workspace.dependencies]
-mu-ci-controller = { path = "controller", version = "0.1.0" }
+mu-ci-controller = { path = "controller", version = "0.1.1" }
 mu-ci-worker = { path = "worker", version = "0.2.0" }
-mu-ci-ipc = { path = "ipc", version = "0.1.0" }
-mu-ci-tools = { path = "tools", version = "0.1.0" }
-mu-ci-isolation = { path = "isolation", version = "0.1.0" }
+mu-ci-ipc = { path = "ipc", version = "0.1.1" }
+mu-ci-tools = { path = "tools", version = "0.1.1" }
+mu-ci-isolation = { path = "isolation", version = "0.1.1" }
 mu-ci-web = { path = "web", version = "0.1.0" }
 
 [patch."https://github.com/LMA1980/mu-ci-controller.git"]
