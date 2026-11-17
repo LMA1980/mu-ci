@@ -9,7 +9,7 @@
 
 ______________________________________________________________________
 
-Distributed Continuous Integration (CI) and verification fabric for the K3 ecosystem. `mu-ci` orchestrates declarative 3-tier execution pipelines (`.muci/mu-ci.yml` / `.actionrunner/ActionRunner.yml`), enforces Kahn DAG stage topological scheduling, manages typed compile-time tool invocations without arbitrary shell execution, applies 3-layer monotonic privilege attenuation sandboxing, and delivers real-time execution monitoring across heterogeneous `x86_64` and SpacemiT K3 (`riscv64gc`) worker clusters.
+Distributed Continuous Integration (CI) and verification fabric for the K3 ecosystem. `mu-ci` orchestrates declarative 3-tier execution pipelines (`.muci/mu-ci.yml` with `.actionrunner/ActionRunner.yml` fallback), enforces Kahn DAG stage topological scheduling, manages typed compile-time tool invocations without arbitrary shell execution, applies 3-layer monotonic privilege attenuation sandboxing, and delivers real-time execution monitoring across heterogeneous `x86_64` and SpacemiT K3 (`riscv64gc`) worker clusters.
 
 See the key design documents:
 
@@ -23,12 +23,30 @@ ______________________________________________________________________
 
 | Submodule                             | Target                 | License                                       | Responsibility                                                                                        |
 | ------------------------------------- | ---------------------- | --------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| [`mu-ci-controller`](code/controller) | native                 | AGPL-3.0-only                                 | WebAPI ingress, GitHub webhooks, DAG stage scheduler, HA failover, job store, and SVG scorecards      |
+| [`mu-ci-controller`](code/controller) | native                 | AGPL-3.0-only                                 | WebAPI ingress, GitHub webhooks, DAG stage scheduler, HA failover, auth endpoints, and SVG scorecards |
 | [`mu-ci-worker`](code/worker)         | native                 | AGPL-3.0-only                                 | Distributed stage execution agent, slot lease manager, and stage runner daemon                        |
 | [`mu-ci-ipc`](code/ipc)               | native                 | LGPL-3.0-only WITH LGPL-3.0-linking-exception | Zero-copy framed IPC protocol library using Apache Fory, Apache Arrow, and zerocopy                   |
-| [`mu-ci-tools`](code/tools)           | native                 | LGPL-3.0-only WITH LGPL-3.0-linking-exception | Compile-time modular `ToolAdapter` registry and 11 typed tool wrappers (rejects arbitrary shell exec) |
+| [`mu-ci-tools`](code/tools)           | native                 | LGPL-3.0-only WITH LGPL-3.0-linking-exception | Compile-time modular `ToolAdapter` registry and 12 typed tool wrappers (incl. `CargoDeployAdapter`)   |
 | [`mu-ci-isolation`](code/isolation)   | native                 | LGPL-3.0-only WITH LGPL-3.0-linking-exception | 3-layer monotonic privilege attenuation engine and dual-backend `KernelSandbox`/`HypervisorSandbox`   |
-| [`mu-ci-web`](code/web)               | wasm32-unknown-unknown | AGPL-3.0-only                                 | Leptos WASM Queue Monitor & Job Drill-Down Web UI for SpacemiT K3                                     |
+| [`mu-ci-web`](code/web)               | wasm32-unknown-unknown | AGPL-3.0-only                                 | Leptos WASM Queue Monitor & Job Drill-Down Web UI operating alongside `mu-console`                    |
+
+## Ecosystem Integrations
+
+`mu-ci` integrates directly with companion platform repositories:
+
+- **[`mu-auth`](https://github.com/LMA1980/mu-auth)**: Powers `/api/auth/*` RBAC policy folios, timed `RoleLeases`, `GithubEdgeAuthAdapter`, HMAC invites, and WebAuthn Passkeys hosted on `mu-ci-controller`.
+- **[`mu-observable`](https://github.com/LMA1980/mu-observable)**: Remote persistence and observability via `MuObserveRemoteStorage` (`mu-ci-controller` to [`mu-observable-hub`](https://github.com/LMA1980/mu-observable-hub) over `step-ca` mTLS using `mu-observable-ipc`) and worker OTEL span/log/test/benchmark streaming to [`mu-observable-collector`](https://github.com/LMA1980/mu-observable-collector).
+- **[`mu-registry`](https://github.com/LMA1980/mu-registry)**: Post-CI CAS release artifact and integration-test (IT) bundle uploads and sparse crate verification (`CargoDeployAdapter` / `CargoPublishAdapter`).
+- **[`mu-cd`](https://github.com/LMA1980/mu-cd)**: Dispatches verified `main`-branch release rollouts to [`mu-cd-controller`](https://github.com/LMA1980/mu-cd-controller) via `POST /api/cd/deploy`.
+- **[`mu-console`](https://github.com/LMA1980/mu-console)**: Unified platform operations console consuming `mu-ci-controller` read-only and `/api/auth/*` APIs alongside [`mu-ci-web`](code/web).
+
+## Declarative Workflow Schema (`version: "3"` and `version: "4"`)
+
+Workflows declared in `.muci/mu-ci.yml` (or `.actionrunner/ActionRunner.yml`) support both `version: "3"` and `version: "4"`:
+
+- **Typed Tool & DAG Model (`version: "3"` / `"4"`)**: Defines `tasks` mapped to the 12 registered [`mu-ci-tools`](code/tools) adapters (including `cargo-deploy` / `CargoDeployAdapter`), `stages` with `depends_on` DAG edges, `tags`, `exclusive`, `sccache` policy (`try` | `mandatory` | `false`), and `on_action` event projections (`push`, `pull_request`, `merge`, `tag`).
+- **Compiler & C-Toolchain Requirements (`version: "4"`)**: Adds structured `toolchain` constraints (`toolchain.min_version` validated against worker `rust_semver` capability announcements, plus `channel` and `c_toolchain`).
+- **Capability Unavailability Policy (`if_unavailable`)**: Stages targeting optional hardware capabilities (such as `KVA23` on capable workers) may declare `if_unavailable: { policy: skip, pr_comment: true, capability_label: "KVA23" }` (or `queue` / `skip`) so pipelines skip unavailable optional stages cleanly instead of stalling in the queue.
 
 ## Architecture & Lifecycle
 
@@ -36,27 +54,31 @@ ______________________________________________________________________
 [ Webhook Event (Push / PR / Tag) ]
    │
    ▼
-[ Ingress Controller: Resolve Declarative Workflow (.muci/mu-ci.yml) ]
-   │
+[ mu-ci-controller: Resolve Declarative Workflow (.muci/mu-ci.yml, v3/v4) ]
+   ├── Auth & Console RBAC ──> [ mu-auth (/api/auth/*, Passkeys, PolicyFolios) ]
    ▼
-[ DAG Projection (subgraph_for_event) & Topological Kahn Scheduling ]
+[ DAG Projection (subgraph_for_event), Toolchain Check & Kahn Scheduling ]
    │
    ▼
 [ Discover Idle Worker Slot (max_slots = 1) ] ──(Busy / Exclusive Wait)──> [ Scheduler Requeue ]
+   │                                            └──(if_unavailable: skip)─> [ Skip Optional Stage ]
+   ▼
+[ Acquire Worker Slot Lease (/api/cluster/tunnel) ]
    │
    ▼
-[ Acquire Worker Slot Lease ]
+[ Monotonic Sandbox Attenuation (Task ⊆ Profile ⊆ Ceiling via mu-ci-isolation) ]
    │
    ▼
-[ Monotonic Sandbox Attenuation (Task ⊆ Profile ⊆ Ceiling) ]
+[ Execute Typed Tool Invocations (12 Adapters in mu-ci-tools Registry) ]
+   ├── Live OTEL Spans/Logs ──> [ mu-observable-collector (mu-observable-ipc) ]
+   ├── Stage Success ─────────> [ Advance Downstream DAG Stages ]
+   └── Stage Failure ─────────> [ Abort Dependent Stages & Emit Failure Scorecard ]
    │
    ▼
-[ Execute Typed Tool Invocations (mu-ci-tools Registry) ]
-   ├── Stage Success ──> [ Advance Downstream DAG Stages ]
-   └── Stage Failure ──> [ Abort Dependent Stages & Emit Failure Scorecard ]
+[ Persist State to mu-observable-hub (MuObserveRemoteStorage) ]
    │
-   ▼
-[ Complete Job & Notify Telemetry Hub ]
+   ▼ (On main push/merge with .mucd/mu-cd.yml)
+[ Upload CAS Artifact + IT Bundle to mu-registry ──> Trigger POST /api/cd/deploy on mu-cd-controller ]
 ```
 
 ## Three-Phase Configuration Migration
