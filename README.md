@@ -77,7 +77,7 @@ Workflows declared in `.muci/mu-ci.yml` (or `.actionrunner/ActionRunner.yml`) su
    ▼
 [ Persist State to mu-observable-hub (MuObserveRemoteStorage) ]
    │
-   ▼ (On main push/merge with .mucd/mu-cd.yml)
+   ▼ (On main push/merge for CD-managed services)
 [ Upload CAS Artifact + IT Bundle to mu-registry ──> Trigger POST /api/cd/deploy on mu-cd-controller ]
 ```
 
